@@ -1,17 +1,17 @@
 {
     "api": "0.13",
-    "space": "Amman Valley MakerSpace",
-    "logo": "https://raw.githubusercontent.com/AmmanVMS/space.api/main/logo-square-white-500x500.png",
-    "url": "https://cwmaman.org.uk/makerspace/",
+    "space": "Linux User Group Saar e.V.",
+    "logo": "https://raw.githubusercontent.com/lugsaar/space.api/main/logo-square-white-500x500.png",
+    "url": "https://lugsaar.de/",
     "location": {
-        "address": "Youth Resource Center/MakerSpace, Station Road, Glanamman, SA18 1LQ, Wales, United Kingdom",
-        "lon": -3.92288,
-        "lat": 51.80626
+        "address": "Luxemburger Ring 8, 66740 Saarlouis, Germany",
+        "lon": 6.74690,
+        "lat": 49.31327
     },
     "contact": {
-        "phone": "01269 823299",
-        "email": "robvenus@cwmamantc.org",
-        "issue_mail": "niccokunzmann@rambler.ru"
+        "phone": "+49 6831 4879866",
+        "email": "info@lug-saar.de",
+        "issue_mail": "info@lug-saar.de"
     },
     "issue_report_channels": [
         "issue_mail"

@@ -34,7 +34,7 @@ def on_message(client, userdata, msg):
 
         logger.info(msg.topic+" "+str(msg.payload))
 
-        is_open = str(msg.payload)
+        is_open = str(msg.payload.decode("utf-8"))
 
         global has_changed
         global data
