@@ -32,9 +32,11 @@ def on_message(client, userdata, msg):
 
     if( msg.topic == "space.api/state"):
 
-        logger.info(msg.topic+" "+str(msg.payload))
+        logger.info(msg.topic+" " + str(msg.payload.decode('utf-8')))
 
-        is_open = str(msg.payload.decode("utf-8"))
+        is_open = True if msg.payload.decode('utf-8').lower().capitalize() == "True" else False
+
+        # is_open = bool(msg.payload.decode('utf-8'))
 
         global has_changed
         global data
