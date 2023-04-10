@@ -1,5 +1,6 @@
 {
     "api": "0.13",
+    "api_compatibility": ["14"],
     "space": "Linux User Group Saar e.V.",
     "logo": "https://raw.githubusercontent.com/lugsaar/space.api/main/logo-square-white-500x500.png",
     "url": "https://lugsaar.de/",
