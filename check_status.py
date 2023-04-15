@@ -73,16 +73,30 @@ if __name__ == '__main__':
         logger.error( 'No MQTT Host set ... exiting the application with error' )
         sys.exit(-1)
 
+    if os.environ.get('MQTT_USER'):
+        MQTT_USER = os.environ.get('MQTT_USER')
+    else:
+        logger.error( 'No MQTT User set ... exiting the application with error' )
+        sys.exit(-1)
+
+    if os.environ.get('MQTT_USER_PW'):
+        MQTT_USER_PW = os.environ.get('MQTT_USER_PW')
+    else:
+        logger.error( 'No MQTT User password set ... exiting the application with error' )
+        sys.exit(-1)
+
     # status.sh - ping
     # status.py - GPIO button press
     # STATUS = os.path.join(HERE, "status.py")
 
     client = mqttc.Client()
+
+    client.user_data_set( MQTT_USER, password = MQTT_USER_PW )
+
     client.on_connect = on_connect
     client.on_message = on_message
 
     client.connect("rohrpostix", 1883, 60)
-
 
     ## ALGORITHM
     subprocess.call(["git", "pull"], cwd=HERE)
