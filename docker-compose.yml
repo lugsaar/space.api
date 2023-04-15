@@ -1,0 +1,9 @@
+version: '2.4'
+
+services:
+  space-api-bot:
+    image: space-api-bot:latest
+    container_name: space-api-bot
+    restart: unless-stopped
+    environment:
+      - MQTT_HOST=rohrpostix
