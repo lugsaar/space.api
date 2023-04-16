@@ -1,21 +1,17 @@
-version: '3.8'
+version: '3.3'
 
 services:
   space.api:
-    # build .
+    # build: ./
     image: space.api
     volumes:
      - type: bind
        source: ${SSH_AUTH_SOCK}
        target: ${SSH_AUTH_SOCK}
-    command:  >      
-      bash -c " git config --global user.name \'super secret username\'
-      && git config --global user.email \'super secret useremail\'
-      && python check_status.py"
     container_name: space.api
     environment:
       - MQTT_HOST=mqtt_host
-      - MQTT_USER=super_secret_user
+      - MQTT_USER=super_secret_username
       - MQTT_USER_PW=super_secret_password
       - SSH_AUTH_SOCK
 

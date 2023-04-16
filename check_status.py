@@ -74,7 +74,7 @@ if __name__ == '__main__':
     # Checking the value of the environment variable
     if os.environ.get('MQTT_HOST'):
         MQTT_HOST = os.environ.get('MQTT_HOST')
-        logger.info('Try to connect to ' + str(MQTT_HOST) )
+        logger.info('Try to connect to ' + str(MQTT_HOST) + ' ...')
     else:
         logger.error( 'No MQTT Host set ... exiting the application with error' )
         sys.exit(-1)
