@@ -5,9 +5,10 @@
 # - changes the values
 # - uploads the current status
 #
+
 import json
 import os
-import sys 
+import sys
 import subprocess
 import paho.mqtt.client as mqttc
 
@@ -25,23 +26,28 @@ def on_connect(client, userdata, flags, rc):
     # reconnect then subscriptions will be renewed.
     client.subscribe("$SYS/#")
     client.subscribe("space.api/state")
-
+    client.subscribe("tele/tasmota_CB1A5C/SENSOR")
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
-    
 
-    if( msg.topic == "space.api/state"):
 
-        logger.info(msg.topic+" " + str(msg.payload.decode('utf-8')))
+    if( msg.topic == "tele/tasmota_CB1A5C/SENSOR"):
 
-        is_open = True if msg.payload.decode('utf-8').lower().capitalize() == "True" else False
+        # logger.info(msg.topic+" " + str(msg.payload.decode('utf-8')))
 
+        payload = json.loads( str(msg.payload.decode('utf-8'))  )
+
+        # logger.info('json string' + str(payload))
+
+        is_open = True if payload["Switch1"] == "ON" else False
+
+        # is_open = True if msg.payload.decode('utf-8').lower().capitalize() == "True" else False
         # is_open = bool(msg.payload.decode('utf-8'))
 
         global has_changed
         global data
-        
+
         has_changed = data["state"]["open"] != is_open
         data["state"]["open"] = is_open
 
@@ -64,7 +70,7 @@ if __name__ == '__main__':
     ## CONSTANTS
     HERE = os.path.dirname(__file__) or "."
     DATA = os.path.join(HERE, "api.json")
-    
+
     # Checking the value of the environment variable
     if os.environ.get('MQTT_HOST'):
         MQTT_HOST = os.environ.get('MQTT_HOST')
@@ -85,18 +91,14 @@ if __name__ == '__main__':
         logger.error( 'No MQTT User password set ... exiting the application with error' )
         sys.exit(-1)
 
-    # status.sh - ping
-    # status.py - GPIO button press
-    # STATUS = os.path.join(HERE, "status.py")
-
     client = mqttc.Client()
 
-    client.user_data_set( MQTT_USER, password = MQTT_USER_PW )
+    client.username_pw_set(MQTT_USER, password = MQTT_USER_PW)
 
     client.on_connect = on_connect
     client.on_message = on_message
 
-    client.connect("rohrpostix", 1883, 60)
+    client.connect(MQTT_HOST, 1883, 60)
 
     ## ALGORITHM
     subprocess.call(["git", "pull"], cwd=HERE)
