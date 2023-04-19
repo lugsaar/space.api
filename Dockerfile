@@ -11,6 +11,4 @@ WORKDIR /usr/src/app
 COPY requirements.txt ./
 RUN --mount=type=ssh  pip install --no-cache-dir -r requirements.txt
 
-COPY . .
-
-CMD [ "python", "./check_status.py" ]
+ENTRYPOINT [ "python", "./check_status.py" ]
