@@ -93,3 +93,6 @@ config
 
 # Rope project settings
 .ropeproject
+
+# docker-compose.override.yml
+docker-compose.override.yml

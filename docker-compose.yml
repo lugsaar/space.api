@@ -1,20 +1,20 @@
-version: '3.8'
+version: '3.3'
 
 services:
   space.api:
     build .
     # image: space.api
+    build: ./
     volumes:
      - type: bind
        source: ${SSH_AUTH_SOCK}
        target: ${SSH_AUTH_SOCK}
      - $PWD:/usr/src/app
-
     container_name: space.api
     environment:
-      - MQTT_HOST=lora.lug-saar.de
-      - MQTT_USER=lugsaar
-      - MQTT_USER_PW=pB62h4HQJbFx3s
+      - MQTT_HOST=mqtt_host
+      - MQTT_USER=super_secret_username
+      - MQTT_USER_PW=super_secret_password
       - SSH_AUTH_SOCK
 
     restart: unless-stopped
