@@ -1,0 +1,5 @@
+{
+  "state_topic": "tele/tasmota_CB1A5C/SENSOR",
+  "expected_key": "Switch1",
+  "expected_state_value": "ON"
+}

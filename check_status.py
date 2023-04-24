@@ -18,58 +18,71 @@ logger = customLogger('customLogger','check_status.log')
 
 has_changed = None
 data = None
+config = None
 
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
     logger.info("Connected with result code "+str(rc))
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
-    client.subscribe("$SYS/#")
-    client.subscribe("space.api/state")
-    client.subscribe("tele/tasmota_CB1A5C/SENSOR")
+    # client.subscribe("$SYS/#")
+    # client.subscribe("space.api/state")
+    if config['state_topic']:
+    	client.subscribe(config['state_topic'])
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
 
+    if( config['state_topic'] and config['expected_key'] and config['expected_state_value'] ):
 
-    if( msg.topic == "tele/tasmota_CB1A5C/SENSOR"):
+        state_topic = config['state_topic']
 
-        # logger.info(msg.topic+" " + str(msg.payload.decode('utf-8')))
+        if config['expected_key'] is not None:
+           expected_key = config['expected_key']
 
-        payload = json.loads( str(msg.payload.decode('utf-8'))  )
+        expected_state_value = config['expected_state_value']
 
-        # logger.info('json string' + str(payload))
 
-        is_open = True if payload["Switch1"] == "ON" else False
+        if( msg.topic == config['state_topic']):
 
-        # is_open = True if msg.payload.decode('utf-8').lower().capitalize() == "True" else False
-        # is_open = bool(msg.payload.decode('utf-8'))
+           # logger.info(msg.topic+" " + str(msg.payload.decode('utf-8')))
+           payload = json.loads( str(msg.payload.decode('utf-8'))  )
 
-        global has_changed
-        global data
+           # logger.info('json string' + str(payload))
 
-        has_changed = data["state"]["open"] != is_open
-        data["state"]["open"] = is_open
+           is_open = True if payload[expected_key] == expected_state_value else False
 
-        logger.info("Status " + ("changed to " if has_changed else "remains ") + ("open" if is_open else "closed") + ".")
+           # is_open = True if msg.payload.decode('utf-8').lower().capitalize() == "True" else False
+           # is_open = bool(msg.payload.decode('utf-8'))
 
-        try: 
+           global has_changed
+           global data
 
-            if has_changed:
-                with open(DATA, "w") as f:
+           has_changed = data["state"]["open"] != is_open
+           data["state"]["open"] = is_open
+
+           logger.info("Status " + ("changed to " if has_changed else "remains ") + ("open" if is_open else "closed") + ".")
+
+           try: 
+
+              if has_changed:
+                 with open(DATA, "w") as f:
                     json.dump(data, f, indent=4)
-                subprocess.check_call(["git", "add", "api.json"], cwd=HERE)
-                subprocess.check_call(["git", "commit", "-m", "space is " + ("open" if is_open else "closed")], cwd=HERE)
-            subprocess.call(["git", "push"], cwd=HERE)
 
-        except CalledProcessError:
-            logger.error('failed to commit state to api.json') 
+                 subprocess.check_call(["git", "add", "api.json"], cwd=HERE)
+                 subprocess.check_call(["git", "commit", "-m", "space is " + ("open" if is_open else "closed")], cwd=HERE)
+                 subprocess.call(["git", "push"], cwd=HERE)
+
+           except CalledProcessError:
+              logger.error('failed to commit state to api.json') 
+
 
 if __name__ == '__main__':
 
     ## CONSTANTS
-    HERE = os.path.dirname(__file__) or "."
-    DATA = os.path.join(HERE, "api.json")
+    HERE = os.path.dirname(__file__) or '.'
+    DATA = os.path.join(HERE, 'api.json')
+    CONFIG = os.path.join(HERE, 'config.json')
 
     # Checking the value of the environment variable
     if os.environ.get('MQTT_HOST'):
@@ -104,8 +117,12 @@ if __name__ == '__main__':
     subprocess.call(["git", "pull"], cwd=HERE)
 
     # load the data AFTER the pull
-    with open(DATA) as f:
-        data = json.load(f)
+    with open(DATA) as data_file:
+        data = json.load(data_file)
+
+
+    with open(CONFIG) as config_file:
+        config = json.load(config_file)
 
     # is_open = subprocess.call([STATUS]) == 0
 
