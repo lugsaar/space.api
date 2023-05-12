@@ -10,79 +10,128 @@ import json
 import os
 import sys
 import subprocess
+import time  
+from threading import Timer 
 import paho.mqtt.client as mqttc
 
 from helpers import customLogger
 
 logger = customLogger('customLogger','check_status.log')
 
-has_changed = None
-data = None
-config = None
-
-# The callback for when the client receives a CONNACK response from the server.
-def on_connect(client, userdata, flags, rc):
-    logger.info("Connected with result code "+str(rc))
-    # Subscribing in on_connect() means that if we lose the connection and
-    # reconnect then subscriptions will be renewed.
-    # client.subscribe("$SYS/#")
-    # client.subscribe("space.api/state")
-    if config['state_topic']:
-    	client.subscribe(config['state_topic'])
-
-# The callback for when a PUBLISH message is received from the server.
-def on_message(client, userdata, msg):
-
-    if( config['state_topic'] and config['expected_key'] and config['expected_state_value'] ):
-
-        state_topic = config['state_topic']
-
-        if config['expected_key'] is not None:
-           expected_key = config['expected_key']
-
-        expected_state_value = config['expected_state_value']
 
 
-        if( msg.topic == config['state_topic']):
+class MQTT2SpaceApiBridge(mqttc.Client):
 
-           # logger.info(msg.topic+" " + str(msg.payload.decode('utf-8')))
-           payload = json.loads( str(msg.payload.decode('utf-8'))  )
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-           # logger.info('json string' + str(payload))
+        ## CONSTANTS
+        self.HERE = os.path.dirname(__file__) or '.'
+        self.DATA = os.path.join(self.HERE, 'api.json')
+        self.CONFIG = os.path.join(self.HERE, 'config.json')
 
-           is_open = True if payload[expected_key] == expected_state_value else False
+        self.has_changed = None
+        self.data = None
+        self.config = None
+        self.last_update = None
 
-           # is_open = True if msg.payload.decode('utf-8').lower().capitalize() == "True" else False
-           # is_open = bool(msg.payload.decode('utf-8'))
+    
+        self._timer = None
 
-           global has_changed
-           global data
+        ## ALGORITHM
+        subprocess.call(["git", "pull"], cwd=self.HERE)
 
-           has_changed = data["state"]["open"] != is_open
-           data["state"]["open"] = is_open
+        # load the data AFTER the pull
+        with open(self.DATA) as data_file:
+            self.data = json.load(data_file)
 
-           logger.info("Status " + ("changed to " if has_changed else "remains ") + ("open" if is_open else "closed") + ".")
 
-           try: 
+        with open(self.CONFIG) as config_file:
+            self.config = json.load(config_file)
 
-              if has_changed:
-                 with open(DATA, "w") as f:
-                    json.dump(data, f, indent=4)
+    def _check_state_frequency_fun(self, update_time):
+        logger.info('checking last update time !!')
 
-                 subprocess.check_call(["git", "add", "api.json"], cwd=HERE)
-                 subprocess.check_call(["git", "commit", "-m", "space is " + ("open" if is_open else "closed")], cwd=HERE)
-                 subprocess.call(["git", "push"], cwd=HERE)
+        if self.last_update < (time.time() - update_time):
+            logger.info( 'last update more than {} minutes ago'.format(update_time) )
+ 
+        self._timer = Timer(update_time, self._check_state_frequency_fun, [update_time] )
+        self._timer.start() 
 
-           except CalledProcessError:
-              logger.error('failed to commit state to api.json') 
+    # The callback for when the client receives a CONNACK response from the server.
+    def on_connect(self, client, userdata, flags, rc):
+        logger.info("Connected with result code "+str(rc))
+        # Subscribing in on_connect() means that if we lose the connection and
+        # reconnect then subscriptions will be renewed.
+        # client.subscribe("$SYS/#")
+        # client.subscribe("space.api/state")
+        if self.config['state_topic']:
+            client.subscribe(self.config['state_topic'])
+
+
+    # The callback for when a PUBLISH message is received from the server.
+    def on_message(self, client, userdata, msg):
+
+        if( self.config['state_topic'] and self.config['expected_key'] and self.config['expected_state_value'] ):
+
+            if self.config['state_topic']is not None:
+                state_topic = self.config['state_topic']
+            else:
+                logger.error('no state topic set to listen ...')
+
+            if self.config['expected_key'] is not None:
+                expected_key = self.config['expected_key']
+
+            if self.config['expected_state_value'] is not None:
+                expected_state_value = self.config['expected_state_value']
+
+
+            if( msg.topic == self.config['state_topic']):
+
+                if self._timer == None:
+                    self._timer = Timer(300, self._check_state_frequency_fun, [300])
+                    self._timer.start()
+                    logger.info('state message received, starting timer first time ...')
+                else:
+                    self._timer.cancel()
+                    self._timer = Timer(300, self._check_state_frequency_fun, [300])
+                    self._timer.start()
+                    logger.info('state message received while timer is running, reseting timer ...')
+                    
+
+                # logger.info(msg.topic+" " + str(msg.payload.decode('utf-8')))
+                payload = json.loads( str(msg.payload.decode('utf-8'))  )
+
+                # logger.info('json string' + str(payload))
+
+                is_open = True if payload[expected_key] == expected_state_value else False
+
+                # is_open = True if msg.payload.decode('utf-8').lower().capitalize() == "True" else False
+                # is_open = bool(msg.payload.decode('utf-8'))
+
+
+                self.has_changed = self.data["state"]["open"] != is_open
+                self.data["state"]["open"] = is_open
+
+                logger.info("Status " + ("changed to " if self.has_changed else "remains ") + ("open" if is_open else "closed") + ".")
+
+                try: 
+
+                    if self.has_changed:
+                        self.last_update = time.time()
+
+                        with open(self.DATA, "w") as f:
+                            json.dump(self.data, f, indent=4)
+
+                        subprocess.check_call(["git", "add", "api.json"], cwd=self.HERE)
+                        subprocess.check_call(["git", "commit", "-m", "space is " + ("open" if is_open else "closed")], cwd=self.HERE)
+                        subprocess.call(["git", "push"], cwd=self.HERE)
+                        logger.info('pushing new state to GitHub Repo')
+                except CalledProcessError:
+                    logger.error('failed to commit state to api.json') 
 
 
 if __name__ == '__main__':
-
-    ## CONSTANTS
-    HERE = os.path.dirname(__file__) or '.'
-    DATA = os.path.join(HERE, 'api.json')
-    CONFIG = os.path.join(HERE, 'config.json')
 
     # Checking the value of the environment variable
     if os.environ.get('MQTT_HOST'):
@@ -104,30 +153,17 @@ if __name__ == '__main__':
         logger.error( 'No MQTT User password set ... exiting the application with error' )
         sys.exit(-1)
 
-    client = mqttc.Client()
 
-    client.username_pw_set(MQTT_USER, password = MQTT_USER_PW)
+    bridge = MQTT2SpaceApiBridge()
 
-    client.on_connect = on_connect
-    client.on_message = on_message
+    bridge.username_pw_set(MQTT_USER, password = MQTT_USER_PW)
 
-    client.connect(MQTT_HOST, 1883, 60)
-
-    ## ALGORITHM
-    subprocess.call(["git", "pull"], cwd=HERE)
-
-    # load the data AFTER the pull
-    with open(DATA) as data_file:
-        data = json.load(data_file)
-
-
-    with open(CONFIG) as config_file:
-        config = json.load(config_file)
-
-    # is_open = subprocess.call([STATUS]) == 0
-
+    bridge.connect(MQTT_HOST, 1883, 60)
+    
     # Blocking call that processes network traffic, dispatches callbacks and
     # handles reconnecting.
     # Other loop*() functions are available that give a threaded interface and a
     # manual interface.
-    client.loop_forever()
+    bridge.loop_forever()
+
+    

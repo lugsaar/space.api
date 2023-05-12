@@ -10,8 +10,6 @@ More information on the usage, installation and examples will follow shortly aft
 
 Have a look at the example folder, where you will find a simple JavaScript to add the status to your web page. 
 
-I
-
 
 
 
